@@ -110,7 +110,7 @@ docker rm fmc-web
 
 ### FMC Instance Configuration
 
-For each FMC instance (BRU, FRA, DFW, JFK), set:
+For each FMC instance (FMC1, FMC2, FMC3, FMC4), set:
 - `FMC_{INSTANCE}_NAME`: Display name
 - `FMC_{INSTANCE}_URL`: FMC management URL
 - `FMC_{INSTANCE}_USERNAME`: API username
