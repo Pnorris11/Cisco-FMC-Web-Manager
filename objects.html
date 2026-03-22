@@ -1,0 +1,1757 @@
+{% extends "base.html" %}
+
+{% block title %}Object Management{% endblock %}
+
+{% block content %}
+<!-- Object Management Header -->
+<div class="text-center mb-4">
+    <div class="d-inline-flex align-items-center justify-content-center bg-success bg-gradient rounded-circle mb-3"
+         style="width: 80px; height: 80px;">
+        <i class="bi bi-boxes text-white" style="font-size: 2rem;"></i>
+    </div>
+    <h1 class="display-6 fw-bold mb-3">Object Management</h1>
+    <p class="lead text-muted mb-0">Create, manage, and organize FMC objects and groups</p>
+</div>
+
+<!-- Refresh Button -->
+<div class="row justify-content-center mb-3">
+    <div class="col-auto">
+        <button id="refresh-data-btn" class="btn btn-primary" onclick="refreshCurrentView()">
+            <i class="bi bi-arrow-clockwise me-2"></i>Refresh Data
+        </button>
+    </div>
+</div>
+
+<!-- Action Cards -->
+<div class="row g-4 mb-5">
+    <div class="col-lg-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center p-4">
+                <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-gradient rounded-circle mb-3" 
+                     style="width: 64px; height: 64px;">
+                    <i class="bi bi-search text-white" style="font-size: 1.5rem;"></i>
+                </div>
+                <h5 class="card-title fw-semibold">Search Objects</h5>
+                <p class="card-text text-muted">Find existing objects across all FMC systems</p>
+                <button class="btn btn-primary" onclick="loadObjectSearch()">
+                    <i class="bi bi-search me-2"></i>Search Objects
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3">
+        <div class="card border-0 shadow-sm h-100 success-card">
+            <div class="card-body text-center p-4">
+                <div class="d-inline-flex align-items-center justify-content-center bg-success bg-gradient rounded-circle mb-3" 
+                     style="width: 64px; height: 64px;">
+                    <i class="bi bi-plus-lg text-white" style="font-size: 1.5rem;"></i>
+                </div>
+                <h5 class="card-title fw-semibold">Create New Object</h5>
+                <p class="card-text text-muted">Add new FQDN objects to your FMC systems</p>
+                <button class="btn btn-success" onclick="openCreateModal()">
+                    <i class="bi bi-plus-lg me-2"></i>Create Object
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3">
+        <div class="card border-0 shadow-sm h-100 warning-card">
+            <div class="card-body text-center p-4">
+                <div class="d-inline-flex align-items-center justify-content-center bg-warning bg-gradient rounded-circle mb-3" 
+                     style="width: 64px; height: 64px;">
+                    <i class="bi bi-collection text-white" style="font-size: 1.5rem;"></i>
+                </div>
+                <h5 class="card-title fw-semibold">Manage Groups</h5>
+                <p class="card-text text-muted">Add or remove objects from network groups</p>
+                <button class="btn btn-warning" onclick="loadGroupManagement()">
+                    <i class="bi bi-collection me-2"></i>Manage Groups
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3">
+        <div class="card border-0 shadow-sm h-100 error-card">
+            <div class="card-body text-center p-4">
+                <div class="d-inline-flex align-items-center justify-content-center bg-danger bg-gradient rounded-circle mb-3" 
+                     style="width: 64px; height: 64px;">
+                    <i class="bi bi-trash text-white" style="font-size: 1.5rem;"></i>
+                </div>
+                <h5 class="card-title fw-semibold">Delete Objects</h5>
+                <p class="card-text text-muted">Remove objects from FMC systems</p>
+                <button class="btn btn-danger" onclick="loadObjectDeletion()">
+                    <i class="bi bi-trash me-2"></i>Delete Objects
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dynamic Content Area -->
+<div id="content-area">
+    <!-- This will be populated dynamically based on user selection -->
+    <div class="card border-0 shadow-lg">
+        <div class="card-header py-3" style="background: var(--gradient-primary);">
+            <h5 class="mb-0 text-white fw-semibold">
+                <i class="bi bi-info-circle me-2"></i>Getting Started
+            </h5>
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <h6 class="fw-semibold mb-3">Search Objects</h6>
+                    <p class="text-muted mb-3">Find existing objects across all FMC systems using powerful search capabilities.</p>
+                    <div class="d-flex align-items-center text-primary">
+                        <i class="bi bi-lightning me-2"></i>
+                        <small>Real-time search across all FMCs</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="fw-semibold mb-3">Create Objects</h6>
+                    <p class="text-muted mb-3">Add new FQDN objects to your FMC systems. Objects can be created independently or added directly to network groups.</p>
+                    <div class="d-flex align-items-center text-success">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <small>Supports multiple FMC systems simultaneously</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="fw-semibold mb-3">Manage Groups</h6>
+                    <p class="text-muted mb-3">Add or remove objects from network groups while preserving existing group members.</p>
+                    <div class="d-flex align-items-center text-warning">
+                        <i class="bi bi-shield-check me-2"></i>
+                        <small>Preserves existing group configurations</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Object Modal -->
+<div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" style="pointer-events: auto;">
+        <div class="modal-content" style="pointer-events: auto; background-color: #2b3035;">
+            <div class="modal-header" style="background-color: #343a40; border-bottom: 1px solid #495057;">
+                <h5 class="modal-title" id="createModalLabel">
+                    <i class="bi bi-plus-lg me-2"></i>Create New Object
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="background-color: #2b3035;">
+                <form id="createForm">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Object Type</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="modal_object_type" id="modal_type_fqdn" value="fqdn" checked>
+                                <label class="btn btn-outline-primary" for="modal_type_fqdn">FQDN</label>
+                                
+                                <input type="radio" class="btn-check" name="modal_object_type" id="modal_type_host" value="host">
+                                <label class="btn btn-outline-primary" for="modal_type_host">Host (IP)</label>
+                                
+                                <input type="radio" class="btn-check" name="modal_object_type" id="modal_type_network" value="network">
+                                <label class="btn btn-outline-primary" for="modal_type_network">Network (Subnet)</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label for="fqdn" class="form-label fw-semibold" id="modal_value_label">FQDN Value</label>
+                            <input type="text" class="form-control" id="fqdn" name="fqdn" placeholder="example.com" required autocomplete="off" style="background-color: #1e2125; color: #fff; border-color: #495057; pointer-events: auto;">
+                            <div class="form-text" id="modal_value_help">Enter the fully qualified domain name</div>
+                        </div>
+                        <div class="col-12">
+                            <label for="group_name" class="form-label fw-semibold">Network Group (Optional)</label>
+                            <select class="form-select" id="group_name" name="group_name" style="background-color: #1e2125; color: #fff; border-color: #495057; pointer-events: auto;">
+                                <option value="">-- Create object only --</option>
+                            </select>
+                            <div class="form-text">Select a group to add the object to, or leave blank to create object only</div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="background-color: #343a40; border-top: 1px solid #495057;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="createObject()">
+                    <i class="bi bi-plus-lg me-2"></i>Create Object
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 d-none" style="background: rgba(0,0,0,0.7); z-index: 1030;">
+    <div class="d-flex align-items-center justify-content-center h-100">
+        <div class="text-center text-white">
+            <div class="spinner-border mb-3" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <h5>Loading...</h5>
+            <p id="loading-message">Please wait</p>
+        </div>
+    </div>
+</div>
+
+<script>
+let fmcGroups = {};
+let fmcObjects = {};
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    loadGroupsData();
+});
+
+function showLoading(message = 'Loading...') {
+    document.getElementById('loading-message').textContent = message;
+    document.getElementById('loading-overlay').classList.remove('d-none');
+}
+
+function hideLoading() {
+    document.getElementById('loading-overlay').classList.add('d-none');
+}
+
+function loadGroupsData() {
+    showLoading('Loading network groups...');
+    
+    fetch('/api/objects/groups')
+        .then(response => response.json())
+        .then(data => {
+            fmcGroups = data;
+            
+            // Count total groups for debugging
+            let totalGroups = 0;
+            Object.keys(data).forEach(fmcName => {
+                totalGroups += data[fmcName].length;
+                console.log(`${fmcName}: ${data[fmcName].length} groups`);
+            });
+            console.log(`Total groups loaded: ${totalGroups}`);
+            
+            if (totalGroups === 0) {
+                showToast('No network groups found in any FMC system', 'warning');
+            } else {
+                showToast(`Loaded ${totalGroups} network groups`, 'success');
+            }
+            
+            populateGroupDropdown();
+            hideLoading();
+        })
+        .catch(error => {
+            console.error('Error loading groups:', error);
+            showToast('Failed to load network groups', 'error');
+            hideLoading();
+        });
+}
+
+function populateGroupDropdown() {
+    const select = document.getElementById('group_name');
+    select.innerHTML = '<option value="">-- Create object only --</option>';
+    
+    // Add groups from all FMCs
+    Object.keys(fmcGroups).forEach(fmcName => {
+        if (fmcGroups[fmcName].length > 0) {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = fmcName;
+            
+            fmcGroups[fmcName].forEach(group => {
+                const option = document.createElement('option');
+                option.value = group.name;
+                option.textContent = group.name;
+                option.dataset.fmc = fmcName;
+                option.dataset.groupId = group.id;
+                optgroup.appendChild(option);
+            });
+            
+            select.appendChild(optgroup);
+        }
+    });
+}
+
+function openCreateModal() {
+    // Ensure loading overlay is hidden
+    hideLoading();
+    
+    // Remove any disabled attributes from form elements
+    const modal = document.getElementById('createModal');
+    const inputs = modal.querySelectorAll('input, select, textarea, button');
+    inputs.forEach(input => {
+        input.removeAttribute('disabled');
+        input.removeAttribute('readonly');
+        input.style.pointerEvents = 'auto';
+    });
+    
+    // Set up object type change handlers
+    document.getElementById('modal_type_fqdn').addEventListener('change', function() {
+        if (this.checked) updateModalForType('fqdn');
+    });
+    document.getElementById('modal_type_host').addEventListener('change', function() {
+        if (this.checked) updateModalForType('host');
+    });
+    document.getElementById('modal_type_network').addEventListener('change', function() {
+        if (this.checked) updateModalForType('network');
+    });
+    
+    // Initialize with FQDN type
+    updateModalForType('fqdn');
+    
+    // Show the modal
+    const bsModal = new bootstrap.Modal(modal, {
+        backdrop: 'static',  // Prevent closing on backdrop click
+        keyboard: true
+    });
+    bsModal.show();
+    
+    // Fix backdrop pointer events after modal is shown
+    modal.addEventListener('shown.bs.modal', function () {
+        // Make backdrop non-interfering
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.style.pointerEvents = 'none';
+        }
+        
+        // Ensure modal dialog captures all pointer events
+        const modalDialog = modal.querySelector('.modal-dialog');
+        if (modalDialog) {
+            modalDialog.style.pointerEvents = 'auto';
+        }
+        
+        // Force focus on the first input
+        const fqdnInput = document.getElementById('fqdn');
+        if (fqdnInput) {
+            fqdnInput.focus();
+        }
+    }, { once: true });
+}
+
+function updateModalForType(type) {
+    const label = document.getElementById('modal_value_label');
+    const input = document.getElementById('fqdn');
+    const help = document.getElementById('modal_value_help');
+    
+    if (type === 'fqdn') {
+        label.textContent = 'FQDN Value';
+        input.placeholder = 'example.com';
+        help.textContent = 'Enter the fully qualified domain name';
+    } else if (type === 'host') {
+        label.textContent = 'IP Address';
+        input.placeholder = '192.168.1.1';
+        help.textContent = 'Enter the IP address';
+    } else {
+        label.textContent = 'Network Subnet (CIDR)';
+        input.placeholder = '10.10.10.0/24';
+        help.textContent = 'Enter the network subnet in CIDR notation';
+    }
+    input.value = '';
+}
+
+function createObject() {
+    const form = document.getElementById('createForm');
+    const formData = new FormData(form);
+    
+    const objectType = document.querySelector('input[name="modal_object_type"]:checked').value;
+    const objectValue = formData.get('fqdn').trim();
+    const groupName = formData.get('group_name');
+    
+    if (!objectValue) {
+        const typeLabel = objectType === 'fqdn' ? 'FQDN' : (objectType === 'host' ? 'IP address' : 'network subnet');
+        showToast('Please enter a valid ' + typeLabel, 'error');
+        return;
+    }
+    
+    // Close the modal first
+    const modal = bootstrap.Modal.getInstance(document.getElementById('createModal'));
+    if (modal) {
+        modal.hide();
+    }
+    
+    const typeLabel = objectType === 'fqdn' ? 'FQDN' : (objectType === 'host' ? 'Host' : 'Network');
+    showLoading(`Creating ${typeLabel} object...`);
+    
+    // Submit using JSON to get a JSON response instead of redirect
+    fetch('/submit', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            object_type: objectType,
+            object_value: objectValue,
+            object_name: '',  // Let backend auto-generate
+            object_description: '',
+            group_name: groupName || ''
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        if (data.success) {
+            showToast(`${typeLabel} "${objectValue}" is being created across all FMC systems${groupName ? ' and added to ' + groupName : ''}`, 'success');
+            // Clear the form
+            form.reset();
+            // Optionally reload data
+            setTimeout(() => {
+                loadGroupsData();
+            }, 2000);
+        } else {
+            showToast(data.message || 'Failed to create object', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error creating object:', error);
+        showToast('Failed to create object', 'error');
+        hideLoading();
+    });
+}
+
+function loadGroupManagement() {
+    showLoading('Loading group management interface...');
+    
+    Promise.all([
+        fetch('/api/objects/groups').then(r => r.json()),
+        fetch('/api/objects/fqdns').then(r => r.json())
+    ])
+    .then(([groups, objects]) => {
+        fmcGroups = groups;
+        fmcObjects = objects;
+        renderGroupManagement();
+        hideLoading();
+    })
+    .catch(error => {
+        console.error('Error loading data:', error);
+        showToast('Failed to load group management data', 'error');
+        hideLoading();
+    });
+}
+
+function renderGroupManagement() {
+    const contentArea = document.getElementById('content-area');
+    
+    let html = `
+        <div class="card border-0 shadow-lg">
+            <div class="card-header py-3" style="background: var(--gradient-secondary);">
+                <h5 class="mb-0 text-white fw-semibold">
+                    <i class="bi bi-collection me-2"></i>Group Management
+                </h5>
+            </div>
+            <div class="card-body p-4">
+    `;
+    
+    let totalGroups = 0;
+    let fmcsWithGroups = 0;
+    
+    Object.keys(fmcGroups).forEach(fmcName => {
+        const fmcGroupCount = fmcGroups[fmcName].length;
+        totalGroups += fmcGroupCount;
+        
+        if (fmcGroupCount > 0) {
+            fmcsWithGroups++;
+            html += `
+                <div class="mb-4">
+                    <h6 class="fw-semibold mb-3">
+                        <i class="bi bi-server me-2"></i>${fmcName} 
+                        <span class="badge bg-primary ms-2">${fmcGroupCount} groups</span>
+                    </h6>
+                    <div class="row g-3">
+            `;
+            
+            fmcGroups[fmcName].forEach(group => {
+                const objectCount = group.objects ? group.objects.length : 0;
+                const escapedFmcName = fmcName.replace(/'/g, "\\'");
+                const escapedGroupName = group.name.replace(/'/g, "\\'");
+                html += `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body p-3">
+                                <h6 class="card-title mb-2">${group.name}</h6>
+                                <p class="card-text text-muted small mb-3">
+                                    ${objectCount} objects
+                                </p>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-sm btn-outline-success" onclick="addToGroup('${escapedFmcName}', '${group.id}', '${escapedGroupName}')">
+                                        <i class="bi bi-plus me-1"></i>Add Object
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="viewGroupObjects('${escapedFmcName}', '${group.id}', '${escapedGroupName}')">
+                                        <i class="bi bi-eye me-1"></i>View Objects
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        } else {
+            html += `
+                <div class="mb-4">
+                    <h6 class="fw-semibold mb-3">
+                        <i class="bi bi-server me-2"></i>${fmcName}
+                        <span class="badge bg-secondary ms-2">No groups</span>
+                    </h6>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        No network groups found in this FMC system.
+                    </div>
+                </div>
+            `;
+        }
+    });
+    
+    // Show message if no groups at all
+    if (totalGroups === 0) {
+        html += `
+            <div class="alert alert-warning">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-exclamation-triangle me-3" style="font-size: 1.5rem;"></i>
+                    <div>
+                        <h6 class="alert-heading mb-1">No Network Groups Found</h6>
+                        <p class="mb-0">No network groups were found in any of the configured FMC systems. This could be due to:</p>
+                        <ul class="mb-0 mt-2">
+                            <li>No network groups exist in the FMC systems</li>
+                            <li>Authentication or permission issues</li>
+                            <li>Network connectivity problems</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    html += `
+            </div>
+        </div>
+    `;
+    
+    contentArea.innerHTML = html;
+}
+
+function loadObjectDeletion() {
+    showLoading('Loading objects for deletion...');
+    
+    fetch('/api/objects/fqdns')
+        .then(response => response.json())
+        .then(data => {
+            fmcObjects = data;
+            renderObjectDeletion();
+            hideLoading();
+        })
+        .catch(error => {
+            console.error('Error loading objects:', error);
+            showToast('Failed to load objects', 'error');
+            hideLoading();
+        });
+}
+
+function renderObjectDeletion() {
+    const contentArea = document.getElementById('content-area');
+    
+    const html = `
+        <div class="card border-0 shadow-lg">
+            <div class="card-header py-3" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+                <h5 class="mb-0 text-white fw-semibold">
+                    <i class="bi bi-trash me-2"></i>Delete Objects
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <!-- Search Section -->
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <label for="deleteSearchTerm" class="form-label fw-semibold">Search Objects to Delete</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text">
+                                <i class="bi bi-search text-danger"></i>
+                            </span>
+                            <input type="text" class="form-control" id="deleteSearchTerm" 
+                                   placeholder="Search by object name, FQDN, or IP address..."
+                                   onkeypress="if(event.key==='Enter') searchObjectsForDeletion()"
+                                   oninput="filterDeleteObjects()">
+                        </div>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Search and filter objects before deletion. Leave empty to show all objects.
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="deleteFmcFilter" class="form-label fw-semibold">Filter by FMC</label>
+                        <select class="form-select form-select-lg" id="deleteFmcFilter" onchange="filterDeleteObjects()">
+                            <option value="">All FMC Systems</option>
+                        </select>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Filter objects by specific FMC system
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Search Controls -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button class="btn btn-primary" onclick="searchObjectsForDeletion()">
+                                <i class="bi bi-search me-2"></i>Search Objects
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="loadAllObjectsForDeletion()">
+                                <i class="bi bi-list me-2"></i>Show All Objects
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="clearDeleteSelection()">
+                                <i class="bi bi-x-circle me-2"></i>Clear Selection
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Selection Summary -->
+                <div id="deleteSelectionSummary" class="d-none mb-4">
+                    <div class="alert alert-warning">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <span id="deleteSelectionCount">0</span> object(s) selected for deletion
+                            </div>
+                            <button class="btn btn-danger" onclick="confirmBulkDelete()">
+                                <i class="bi bi-trash me-2"></i>Delete Selected
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Objects Display -->
+                <div id="deleteObjectsDisplay">
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-search" style="font-size: 3rem;"></i>
+                        <h5 class="mt-3">Search for Objects to Delete</h5>
+                        <p>Use the search box above to find objects, or click "Show All Objects" to see everything.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    contentArea.innerHTML = html;
+    
+    // Populate FMC filter dropdown
+    populateDeleteFmcFilter();
+    
+    // Load all FQDN objects for deletion
+    loadFqdnObjectsForDeletion();
+}
+
+function confirmDelete(fmcName, objectId, objectName) {
+    if (confirm(`Are you sure you want to delete the object "${objectName}" from ${fmcName}?\\n\\nThis action cannot be undone.`)) {
+        deleteObject(fmcName, objectId, objectName);
+    }
+}
+
+function deleteObject(fmcName, objectId, objectName) {
+    showLoading(`Deleting ${objectName}...`);
+    
+    fetch(`/api/objects/fqdns/${objectId}?fmc_name=${encodeURIComponent(fmcName)}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`Object "${objectName}" deleted successfully`, 'success');
+            // Remove from selected objects and refresh display
+            removeFromDeleteSelection(objectId);
+            searchObjectsForDeletion(); // Refresh the search results
+        } else {
+            showToast(`Failed to delete object: ${data.message}`, 'error');
+        }
+        hideLoading();
+    })
+    .catch(error => {
+        console.error('Error deleting object:', error);
+        showToast('Failed to delete object', 'error');
+        hideLoading();
+    });
+}
+
+// Debounce utility function for search
+let searchDebounceTimer = null;
+function debounce(func, delay) {
+    return function(...args) {
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+// New delete functionality with search
+let deleteSearchResults = {};
+let selectedDeleteObjects = new Set();
+
+function loadFqdnObjectsForDeletion() {
+    showLoading('Loading FQDN objects...');
+    
+    fetch('/api/objects/fqdns')
+        .then(response => response.json())
+        .then(data => {
+            fmcObjects = data;
+            hideLoading();
+        })
+        .catch(error => {
+            console.error('Error loading FQDN objects:', error);
+            showToast('Failed to load FQDN objects', 'error');
+            hideLoading();
+        });
+}
+
+function populateDeleteFmcFilter() {
+    const select = document.getElementById('deleteFmcFilter');
+    select.innerHTML = '<option value="">All FMC Systems</option>';
+    
+    Object.keys(fmcObjects).forEach(fmcName => {
+        const option = document.createElement('option');
+        option.value = fmcName;
+        option.textContent = `${fmcName} (${fmcObjects[fmcName].length} objects)`;
+        select.appendChild(option);
+    });
+}
+
+function searchObjectsForDeletion() {
+    const searchTerm = document.getElementById('deleteSearchTerm').value.trim();
+    
+    if (!searchTerm) {
+        loadAllObjectsForDeletion();
+        return;
+    }
+    
+    if (searchTerm.length < 2) {
+        showToast('Search term must be at least 2 characters long', 'error');
+        return;
+    }
+    
+    showLoading(`Searching for "${searchTerm}"...`);
+    
+    // Use the existing search API
+    const params = new URLSearchParams({
+        q: searchTerm,
+        type: 'object',
+        objectTypes: 'FQDN'
+    });
+    
+    fetch(`/api/objects/search?${params.toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            deleteSearchResults = data.results || {};
+            displayDeleteSearchResults(data);
+            hideLoading();
+        })
+        .catch(error => {
+            console.error('Search error:', error);
+            showToast('Search failed. Please try again.', 'error');
+            hideLoading();
+        });
+}
+
+function loadAllObjectsForDeletion() {
+    showLoading('Loading all objects...');
+    
+    // Convert fmcObjects to search results format
+    deleteSearchResults = {};
+    Object.keys(fmcObjects).forEach(fmcName => {
+        deleteSearchResults[fmcName] = {
+            success: true,
+            items: fmcObjects[fmcName].map(obj => ({
+                id: obj.id,
+                name: obj.name,
+                value: obj.value,
+                type: 'FQDN',
+                category: 'OBJECT'
+            })),
+            total: fmcObjects[fmcName].length
+        };
+    });
+    
+    displayDeleteSearchResults({
+        success: true,
+        search_term: 'All Objects',
+        total_items: Object.values(deleteSearchResults).reduce((sum, fmc) => sum + fmc.total, 0),
+        results: deleteSearchResults
+    });
+    
+    hideLoading();
+}
+
+// Debounced version of filterDeleteObjects for smoother UX (300ms delay)
+const debouncedFilterDelete = debounce(() => {
+    filterDeleteObjectsImmediate();
+}, 300);
+
+function filterDeleteObjects() {
+    // Use debounced version to avoid excessive filtering
+    debouncedFilterDelete();
+}
+
+function filterDeleteObjectsImmediate() {
+    const searchTerm = document.getElementById('deleteSearchTerm').value.trim().toLowerCase();
+    const fmcFilter = document.getElementById('deleteFmcFilter').value;
+
+    if (!deleteSearchResults || Object.keys(deleteSearchResults).length === 0) {
+        return;
+    }
+    
+    // Filter the current results
+    const filteredResults = {};
+    
+    Object.keys(deleteSearchResults).forEach(fmcName => {
+        // Skip if FMC filter is set and doesn't match
+        if (fmcFilter && fmcName !== fmcFilter) {
+            return;
+        }
+        
+        const fmcResult = deleteSearchResults[fmcName];
+        if (fmcResult.success && fmcResult.items) {
+            let filteredItems = fmcResult.items;
+            
+            // Apply text filter if search term exists
+            if (searchTerm) {
+                filteredItems = fmcResult.items.filter(item => 
+                    (item.name && item.name.toLowerCase().includes(searchTerm)) ||
+                    (item.value && item.value.toLowerCase().includes(searchTerm))
+                );
+            }
+            
+            filteredResults[fmcName] = {
+                ...fmcResult,
+                items: filteredItems,
+                total: filteredItems.length
+            };
+        }
+    });
+    
+    displayDeleteSearchResults({
+        success: true,
+        search_term: searchTerm || fmcFilter || 'Filtered',
+        total_items: Object.values(filteredResults).reduce((sum, fmc) => sum + fmc.total, 0),
+        results: filteredResults
+    });
+}
+
+function displayDeleteSearchResults(data) {
+    const displayDiv = document.getElementById('deleteObjectsDisplay');
+    
+    if (!data.success) {
+        displayDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Search failed. Please try again.
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    
+    // Summary
+    html += `
+        <div class="alert alert-info d-flex align-items-center mb-4">
+            <i class="bi bi-info-circle me-2"></i>
+            <div>
+                Found <strong>${data.total_items}</strong> objects
+                ${data.search_term !== 'All Objects' ? ` matching "<strong>${data.search_term}</strong>"` : ''}
+            </div>
+        </div>
+    `;
+    
+    if (data.total_items === 0) {
+        html += `
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-search" style="font-size: 3rem;"></i>
+                <h5 class="mt-3">No Objects Found</h5>
+                <p>No objects match your search criteria. Try adjusting your search terms.</p>
+            </div>
+        `;
+    } else {
+        // Results by FMC
+        Object.keys(data.results).forEach(fmcName => {
+            const fmcResult = data.results[fmcName];
+            
+            if (!fmcResult.success || fmcResult.items.length === 0) {
+                return;
+            }
+            
+            html += `
+                <div class="card mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span class="fw-semibold">
+                            <i class="bi bi-server me-2"></i>${fmcName}
+                        </span>
+                        <div>
+                            <span class="badge bg-primary me-2">${fmcResult.items.length} objects</span>
+                            <button class="btn btn-sm btn-outline-primary" onclick="selectAllFromFmc('${fmcName}')">
+                                <i class="bi bi-check2-square me-1"></i>Select All
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th width="50">
+                                            <input type="checkbox" class="form-check-input" onchange="toggleFmcSelection('${fmcName}', this.checked)">
+                                        </th>
+                                        <th>Name</th>
+                                        <th>Value</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+            
+            fmcResult.items.forEach(item => {
+                const objectKey = `${fmcName}:${item.id}`;
+                const isSelected = selectedDeleteObjects.has(objectKey);
+                
+                html += `
+                    <tr class="${isSelected ? 'table-warning' : ''}">
+                        <td>
+                            <input type="checkbox" class="form-check-input object-checkbox" 
+                                   data-fmc="${fmcName}" data-object-id="${item.id}"
+                                   ${isSelected ? 'checked' : ''}
+                                   onchange="toggleObjectSelection('${fmcName}', '${item.id}', '${item.name}', this.checked)">
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-globe text-primary me-2"></i>
+                                <strong>${item.name}</strong>
+                            </div>
+                        </td>
+                        <td><code>${item.value || 'N/A'}</code></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete('${fmcName}', '${item.id}', '${item.name}')">
+                                <i class="bi bi-trash me-1"></i>Delete
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+    
+    displayDiv.innerHTML = html;
+    updateDeleteSelectionSummary();
+}
+
+function toggleObjectSelection(fmcName, objectId, objectName, isSelected) {
+    const objectKey = `${fmcName}:${objectId}`;
+    
+    if (isSelected) {
+        selectedDeleteObjects.add(objectKey);
+        console.log(`Selected: ${objectName} from ${fmcName}`);
+    } else {
+        selectedDeleteObjects.delete(objectKey);
+        console.log(`Deselected: ${objectName} from ${fmcName}`);
+    }
+    
+    updateDeleteSelectionSummary();
+    updateRowHighlighting();
+}
+
+function toggleFmcSelection(fmcName, isSelected) {
+    const checkboxes = document.querySelectorAll(`input[data-fmc="${fmcName}"].object-checkbox`);
+    
+    checkboxes.forEach(checkbox => {
+        const objectId = checkbox.dataset.objectId;
+        const objectKey = `${fmcName}:${objectId}`;
+        
+        if (isSelected) {
+            selectedDeleteObjects.add(objectKey);
+            checkbox.checked = true;
+        } else {
+            selectedDeleteObjects.delete(objectKey);
+            checkbox.checked = false;
+        }
+    });
+    
+    updateDeleteSelectionSummary();
+    updateRowHighlighting();
+}
+
+function selectAllFromFmc(fmcName) {
+    toggleFmcSelection(fmcName, true);
+}
+
+function updateRowHighlighting() {
+    document.querySelectorAll('.object-checkbox').forEach(checkbox => {
+        const row = checkbox.closest('tr');
+        if (checkbox.checked) {
+            row.classList.add('table-warning');
+        } else {
+            row.classList.remove('table-warning');
+        }
+    });
+}
+
+function updateDeleteSelectionSummary() {
+    const summaryDiv = document.getElementById('deleteSelectionSummary');
+    const countSpan = document.getElementById('deleteSelectionCount');
+    
+    const count = selectedDeleteObjects.size;
+    countSpan.textContent = count;
+    
+    if (count > 0) {
+        summaryDiv.classList.remove('d-none');
+    } else {
+        summaryDiv.classList.add('d-none');
+    }
+}
+
+function clearDeleteSelection() {
+    selectedDeleteObjects.clear();
+    
+    // Uncheck all checkboxes
+    document.querySelectorAll('.object-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    
+    // Update FMC header checkboxes
+    document.querySelectorAll('.form-check-input').forEach(checkbox => {
+        if (checkbox.onchange && checkbox.onchange.toString().includes('toggleFmcSelection')) {
+            checkbox.checked = false;
+        }
+    });
+    
+    updateDeleteSelectionSummary();
+    updateRowHighlighting();
+}
+
+function removeFromDeleteSelection(objectId) {
+    // Remove from selection if it was selected
+    selectedDeleteObjects.forEach(key => {
+        if (key.includes(`:${objectId}`)) {
+            selectedDeleteObjects.delete(key);
+        }
+    });
+    updateDeleteSelectionSummary();
+}
+
+function confirmBulkDelete() {
+    const count = selectedDeleteObjects.size;
+    if (count === 0) {
+        showToast('No objects selected for deletion', 'warning');
+        return;
+    }
+    
+    const objectList = Array.from(selectedDeleteObjects).map(key => {
+        const [fmcName, objectId] = key.split(':');
+        // Find the object name from search results
+        let objectName = objectId;
+        if (deleteSearchResults[fmcName] && deleteSearchResults[fmcName].items) {
+            const obj = deleteSearchResults[fmcName].items.find(item => item.id === objectId);
+            if (obj) objectName = obj.name;
+        }
+        return `${objectName} (${fmcName})`;
+    }).join('\n');
+    
+    const confirmMessage = `Are you sure you want to delete ${count} selected object(s)?\n\nObjects to be deleted:\n${objectList}\n\nThis action cannot be undone.`;
+    
+    if (confirm(confirmMessage)) {
+        performBulkDelete();
+    }
+}
+
+function performBulkDelete() {
+    const objectsToDelete = Array.from(selectedDeleteObjects);
+    let completed = 0;
+    let failed = 0;
+    
+    showLoading(`Deleting ${objectsToDelete.length} objects...`);
+    
+    const deletePromises = objectsToDelete.map(objectKey => {
+        const [fmcName, objectId] = objectKey.split(':');
+        
+        return fetch(`/api/objects/fqdns/${objectId}?fmc_name=${encodeURIComponent(fmcName)}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                completed++;
+            } else {
+                failed++;
+                console.error(`Failed to delete ${objectId} from ${fmcName}:`, data.message);
+            }
+        })
+        .catch(error => {
+            failed++;
+            console.error(`Error deleting ${objectId} from ${fmcName}:`, error);
+        });
+    });
+    
+    Promise.all(deletePromises).then(() => {
+        hideLoading();
+        
+        if (completed > 0) {
+            showToast(`Successfully deleted ${completed} object(s)`, 'success');
+        }
+        if (failed > 0) {
+            showToast(`Failed to delete ${failed} object(s)`, 'error');
+        }
+        
+        // Clear selection and refresh results
+        clearDeleteSelection();
+        searchObjectsForDeletion(); // Refresh the search results
+    });
+}
+
+function loadObjectSearch() {
+    showLoading('Loading search interface...');
+    renderObjectSearch();
+    hideLoading();
+}
+
+function renderObjectSearch() {
+    const contentArea = document.getElementById('content-area');
+    
+    const html = `
+        <div class="card border-0 shadow-lg">
+            <div class="card-header py-3" style="background: var(--gradient-primary);">
+                <h5 class="mb-0 text-white fw-semibold">
+                    <i class="bi bi-search me-2"></i>Search Objects
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <!-- Search Form -->
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <label for="searchTerm" class="form-label fw-semibold">Search Term</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text">
+                                <i class="bi bi-search text-primary"></i>
+                            </span>
+                            <input type="text" class="form-control" id="searchTerm"
+                                   placeholder="Enter object name, FQDN, or IP address..."
+                                   onkeypress="if(event.key==='Enter') performSearch()"
+                                   oninput="debouncedSearch()">
+                        </div>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Search for objects by name, FQDN, IP address, or partial matches
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="searchType" class="form-label fw-semibold">Search Type</label>
+                        <select class="form-select form-select-lg" id="searchType">
+                            <option value="object">Objects Only</option>
+                            <option value="global">Global Search</option>
+                        </select>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Global search includes policies and rules
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Search Options -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Object Types (Objects Only)</label>
+                        <div class="d-flex flex-wrap gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="FQDN" id="typeNetwork" checked>
+                                <label class="form-check-label" for="typeNetwork">FQDN Objects</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Networks" id="typeNetworks">
+                                <label class="form-check-label" for="typeNetworks">Network Objects</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Ports" id="typePorts">
+                                <label class="form-check-label" for="typePorts">Port Objects</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="Ranges" id="typeRanges">
+                                <label class="form-check-label" for="typeRanges">Range Objects</label>
+                            </div>
+                        </div>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Leave unchecked to search all object types
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Search Button -->
+                <div class="d-grid gap-2 d-md-flex justify-content-md-start mb-4">
+                    <button class="btn btn-primary btn-lg" onclick="performSearch()">
+                        <i class="bi bi-search me-2"></i>Search Objects
+                    </button>
+                    <button class="btn btn-outline-secondary btn-lg" onclick="clearSearchResults()">
+                        <i class="bi bi-x-circle me-2"></i>Clear Results
+                    </button>
+                </div>
+                
+                <!-- Search Results -->
+                <div id="searchResults" class="d-none">
+                    <h6 class="fw-semibold mb-3">Search Results</h6>
+                    <div id="searchResultsContent"></div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    contentArea.innerHTML = html;
+}
+
+// Debounced search function (auto-search after user stops typing for 500ms)
+const debouncedSearch = debounce(() => {
+    const searchTerm = document.getElementById('searchTerm')?.value.trim();
+    // Only auto-search if we have at least 2 characters
+    if (searchTerm && searchTerm.length >= 2) {
+        performSearch();
+    }
+}, 500);
+
+function performSearch() {
+    const searchTerm = document.getElementById('searchTerm').value.trim();
+    const searchType = document.getElementById('searchType').value;
+
+    if (!searchTerm) {
+        showToast('Please enter a search term', 'error');
+        return;
+    }
+
+    if (searchTerm.length < 2) {
+        showToast('Search term must be at least 2 characters long', 'error');
+        return;
+    }
+    
+    // Get selected object types
+    const objectTypes = [];
+    if (searchType === 'object') {
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+        checkboxes.forEach(checkbox => {
+            objectTypes.push(checkbox.value);
+        });
+    }
+    
+    showLoading(`Searching for "${searchTerm}"...`);
+    
+    // Build query parameters
+    const params = new URLSearchParams({
+        q: searchTerm,
+        type: searchType
+    });
+    
+    objectTypes.forEach(type => {
+        params.append('objectTypes', type);
+    });
+    
+    fetch(`/api/objects/search?${params.toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            displaySearchResults(data);
+            hideLoading();
+        })
+        .catch(error => {
+            console.error('Search error:', error);
+            showToast('Search failed. Please try again.', 'error');
+            hideLoading();
+        });
+}
+
+function displaySearchResults(data) {
+    const resultsDiv = document.getElementById('searchResults');
+    const contentDiv = document.getElementById('searchResultsContent');
+    
+    if (!data.success) {
+        showToast('Search failed', 'error');
+        return;
+    }
+    
+    let html = '';
+    
+    // Summary
+    html += `
+        <div class="alert alert-info d-flex align-items-center">
+            <i class="bi bi-info-circle me-2"></i>
+            <div>
+                Found <strong>${data.total_items}</strong> items across <strong>${data.successful_fmcs}/${data.total_fmcs}</strong> FMC systems
+                for search term "<strong>${data.search_term}</strong>"
+            </div>
+        </div>
+    `;
+    
+    // Results by FMC
+    Object.keys(data.results).forEach(fmcName => {
+        const fmcResult = data.results[fmcName];
+        
+        html += `
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold">${fmcName}</span>
+                    ${fmcResult.success ? 
+                        `<span class="badge bg-success">${fmcResult.total} items</span>` :
+                        `<span class="badge bg-danger">Error</span>`
+                    }
+                </div>
+        `;
+        
+        if (!fmcResult.success) {
+            html += `
+                <div class="card-body">
+                    <div class="alert alert-danger mb-0">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        ${fmcResult.message}
+                    </div>
+                </div>
+            `;
+        } else if (fmcResult.items.length === 0) {
+            html += `
+                <div class="card-body">
+                    <div class="text-muted text-center py-3">
+                        <i class="bi bi-search me-2"></i>
+                        No objects found matching the search criteria
+                    </div>
+                </div>
+            `;
+        } else {
+            html += `<div class="card-body p-0">`;
+            html += `<div class="table-responsive">`;
+            html += `
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Value</th>
+                            <th>Category</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            fmcResult.items.forEach(item => {
+                const typeClass = getTypeClass(item.type);
+                html += `
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-${getTypeIcon(item.type)} text-${typeClass} me-2"></i>
+                                <strong>${item.name || 'N/A'}</strong>
+                            </div>
+                        </td>
+                        <td><span class="badge bg-${typeClass}">${item.type}</span></td>
+                        <td><code>${item.value || 'N/A'}</code></td>
+                        <td>${item.category || 'N/A'}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+            `;
+            html += `</div>`;
+            html += `</div>`;
+        }
+        
+        html += `</div>`;
+    });
+    
+    contentDiv.innerHTML = html;
+    resultsDiv.classList.remove('d-none');
+}
+
+function clearSearchResults() {
+    const resultsDiv = document.getElementById('searchResults');
+    const searchTerm = document.getElementById('searchTerm');
+    
+    resultsDiv.classList.add('d-none');
+    searchTerm.value = '';
+    searchTerm.focus();
+}
+
+function getTypeIcon(type) {
+    const iconMap = {
+        'FQDN': 'globe',
+        'Network': 'diagram-3',
+        'NetworkGroup': 'collection',
+        'Port': 'arrow-left-right',
+        'PortGroup': 'collection',
+        'Range': 'arrow-left-right',
+        'Host': 'pc-display',
+        'URL': 'link-45deg',
+        'SecurityGroupTag': 'shield-check',
+        'ISESecurityGroupTag': 'shield-check',
+        'VlanTag': 'tag'
+    };
+    return iconMap[type] || 'box';
+}
+
+function getTypeClass(type) {
+    const classMap = {
+        'FQDN': 'primary',
+        'Network': 'success',
+        'NetworkGroup': 'warning',
+        'Port': 'info',
+        'PortGroup': 'info',
+        'Range': 'secondary',
+        'Host': 'success',
+        'URL': 'primary',
+        'SecurityGroupTag': 'danger',
+        'ISESecurityGroupTag': 'danger',
+        'VlanTag': 'secondary'
+    };
+    return classMap[type] || 'secondary';
+}
+
+{% raw %}
+// Group Management Functions
+function addToGroup(fmcName, groupId, groupName) {
+    // Get available FQDN objects for this FMC
+    const fqdnObjects = fmcObjects[fmcName] || [];
+    
+    if (fqdnObjects.length === 0) {
+        showToast('No FQDN objects available to add', 'warning');
+        return;
+    }
+    
+    // Create modal with object selection
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.id = 'addToGroupModal';
+    modal.innerHTML = `
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Object to ${groupName}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="selectObject" class="form-label fw-semibold">Select FQDN Object</label>
+                    <select class="form-select" id="selectObject">
+                        <option value="">-- Select an object --</option>
+                        ${fqdnObjects.map(obj => `
+                            <option value="${obj.id}" data-name="${obj.name}">
+                                ${obj.name} (${obj.value || 'N/A'})
+                            </option>
+                        `).join('')}
+                    </select>
+                    <div class="form-text">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Select an FQDN object to add to this network group
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="confirmAddToGroup('${fmcName}', '${groupId}', '${groupName}')">
+                        <i class="bi bi-plus me-2"></i>Add Object
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+    
+    modal.addEventListener('hidden.bs.modal', () => {
+        document.body.removeChild(modal);
+    });
+}
+
+function confirmAddToGroup(fmcName, groupId, groupName) {
+    const selectElement = document.getElementById('selectObject');
+    const objectId = selectElement.value;
+    const objectName = selectElement.options[selectElement.selectedIndex].getAttribute('data-name');
+    
+    if (!objectId) {
+        showToast('Please select an object', 'warning');
+        return;
+    }
+    
+    showLoading(`Adding ${objectName} to ${groupName}...`);
+    
+    fetch(`/api/objects/groups/${groupId}/objects`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            fmc_name: fmcName,
+            group_id: groupId,
+            object_id: objectId,
+            object_type: 'FQDN'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        if (data.success) {
+            showToast(`Successfully added ${objectName} to ${groupName}`, 'success');
+            // Close modal
+            const modalElement = document.getElementById('addToGroupModal');
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            modal.hide();
+            // Refresh group management view
+            loadGroupManagement();
+        } else {
+            showToast(`Failed to add object: ${data.message}`, 'error');
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('Error adding object to group:', error);
+        showToast('Network error occurred while adding object', 'error');
+    });
+}
+
+function viewGroupObjects(fmcName, groupId, groupName) {
+    // Find the group data
+    const group = fmcGroups[fmcName].find(g => g.id === groupId);
+    
+    if (!group) {
+        showToast('Group not found', 'error');
+        return;
+    }
+    
+    const objects = group.objects || [];
+    
+    // Create modal to display objects
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.id = 'viewObjectsModal';
+    modal.innerHTML = `
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-collection me-2"></i>${groupName} - Objects
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    ${objects.length === 0 ? `
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            This group has no objects yet.
+                        </div>
+                    ` : `
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Object Name</th>
+                                        <th>Type</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${objects.map(obj => `
+                                        <tr>
+                                            <td>${obj.name}</td>
+                                            <td><span class="badge bg-${getTypeClass(obj.type)}">${obj.type}</span></td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-danger" 
+                                                        onclick="removeFromGroupView('${fmcName}', '${groupId}', '${obj.id}', '${obj.name}', '${groupName}')">
+                                                    <i class="bi bi-trash me-1"></i>Remove
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `}
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="bi bi-server me-1"></i>FMC: ${fmcName} | 
+                            <i class="bi bi-collection me-1"></i>Total Objects: ${objects.length}
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+    
+    modal.addEventListener('hidden.bs.modal', () => {
+        document.body.removeChild(modal);
+    });
+}
+
+function removeFromGroupView(fmcName, groupId, objectId, objectName, groupName) {
+    if (!confirm(`Are you sure you want to remove "${objectName}" from "${groupName}"?`)) {
+        return;
+    }
+    
+    showLoading(`Removing ${objectName} from ${groupName}...`);
+    
+    fetch(`/api/objects/groups/${groupId}/objects/${objectId}?fmc_name=${encodeURIComponent(fmcName)}&object_type=FQDN`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        if (data.success) {
+            showToast(`Successfully removed ${objectName} from ${groupName}`, 'success');
+            // Close the view modal
+            const modalElement = document.getElementById('viewObjectsModal');
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            modal.hide();
+            // Refresh group management view
+            loadGroupManagement();
+        } else {
+            showToast(`Failed to remove object: ${data.message}`, 'error');
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('Error removing object from group:', error);
+        showToast('Network error occurred while removing object', 'error');
+    });
+}
+{% endraw %}
+
+// Toast notification system (reuse from other pages)
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toast-container') || createToastContainer();
+    const toast = document.createElement('div');
+    const iconMap = {
+        'success': 'check-circle-fill',
+        'error': 'exclamation-triangle-fill',
+        'info': 'info-circle-fill'
+    };
+    
+    toast.className = `toast align-items-center text-white bg-${type === 'error' ? 'danger' : type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="bi bi-${iconMap[type]} me-2"></i>
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
+}
+
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '1056';
+    document.body.appendChild(container);
+    return container;
+}
+
+// Global refresh function
+let currentView = null; // Track what's currently displayed
+
+function refreshCurrentView() {
+    const refreshBtn = document.getElementById('refresh-data-btn');
+
+    // Disable button and show loading state
+    if (refreshBtn) {
+        refreshBtn.disabled = true;
+        refreshBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Refreshing...';
+    }
+
+    showToast('Refreshing data...', 'info');
+
+    // Check what's currently displayed and refresh it
+    const contentArea = document.getElementById('content-area');
+    if (contentArea && contentArea.innerHTML.trim() !== '') {
+        // If there's content, reload the page to refresh
+        setTimeout(() => {
+            window.location.reload();
+        }, 500);
+    } else {
+        // No active view, just re-enable the button
+        if (refreshBtn) {
+            refreshBtn.disabled = false;
+            refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Refresh Data';
+        }
+        showToast('No active view to refresh. Please select an action first.', 'info');
+    }
+}
+</script>
+
+<style>
+/* Force modal to be interactive */
+#createModal {
+    pointer-events: auto !important;
+}
+
+#createModal .modal-dialog {
+    pointer-events: auto !important;
+}
+
+#createModal .modal-content {
+    pointer-events: auto !important;
+}
+
+#createModal input,
+#createModal select,
+#createModal textarea,
+#createModal button {
+    pointer-events: auto !important;
+}
+
+#createModal input,
+#createModal textarea {
+    cursor: text !important;
+}
+
+#createModal select,
+#createModal button {
+    cursor: pointer !important;
+}
+
+/* Ensure modal backdrop doesn't block clicks */
+.modal-backdrop {
+    pointer-events: none !important;
+}
+
+/* Ensure modal is above everything */
+.modal-backdrop.show {
+    z-index: 1040 !important;
+}
+
+.modal.show {
+    z-index: 1060 !important;
+}
+
+.modal.show .modal-dialog {
+    pointer-events: auto !important;
+}
+
+/* Make sure clicks inside modal work */
+.modal .form-control:focus,
+.modal .form-select:focus {
+    pointer-events: auto !important;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+}
+</style>
+
+{% endblock %}

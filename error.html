@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}{{ error_title }} - FMC Manager{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card error-card text-center">
+                <div class="card-body py-5">
+                    <!-- Error Icon -->
+                    <div class="mb-4">
+                        {% if error_code == 404 %}
+                            <i class="bi bi-compass" style="font-size: 5rem; color: #667eea;"></i>
+                        {% elif error_code == 403 %}
+                            <i class="bi bi-shield-lock" style="font-size: 5rem; color: #f5576c;"></i>
+                        {% elif error_code == 429 %}
+                            <i class="bi bi-speedometer" style="font-size: 5rem; color: #ffc107;"></i>
+                        {% else %}
+                            <i class="bi bi-exclamation-triangle" style="font-size: 5rem; color: #f5576c;"></i>
+                        {% endif %}
+                    </div>
+
+                    <!-- Error Code -->
+                    <h1 class="display-1 fw-bold mb-3" style="color: #667eea;">
+                        {{ error_code }}
+                    </h1>
+
+                    <!-- Error Title -->
+                    <h2 class="h3 mb-3">{{ error_title }}</h2>
+
+                    <!-- Error Message -->
+                    <p class="lead text-muted mb-4">
+                        {{ error_message }}
+                    </p>
+
+                    <!-- Action Buttons -->
+                    <div class="mt-4">
+                        <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg me-2">
+                            <i class="bi bi-house-door me-2"></i>Go Home
+                        </a>
+                        <button onclick="history.back()" class="btn btn-outline-secondary btn-lg">
+                            <i class="bi bi-arrow-left me-2"></i>Go Back
+                        </button>
+                    </div>
+
+                    <!-- Additional Help -->
+                    {% if error_code == 404 %}
+                    <div class="mt-5 pt-4 border-top">
+                        <p class="text-muted mb-3">
+                            <i class="bi bi-lightbulb me-2"></i>Looking for something?
+                        </p>
+                        <div class="d-flex justify-content-center gap-3">
+                            <a href="{{ url_for('index') }}" class="text-decoration-none">
+                                <i class="bi bi-house me-1"></i>Home
+                            </a>
+                            <a href="{{ url_for('objects_page') }}" class="text-decoration-none">
+                                <i class="bi bi-boxes me-1"></i>Objects
+                            </a>
+                            <a href="{{ url_for('deployments_page') }}" class="text-decoration-none">
+                                <i class="bi bi-rocket-takeoff me-1"></i>Deployments
+                            </a>
+                        </div>
+                    </div>
+                    {% elif error_code == 429 %}
+                    <div class="mt-5 pt-4 border-top">
+                        <p class="text-muted">
+                            <i class="bi bi-clock-history me-2"></i>
+                            Please wait a moment before trying again. This helps keep the service running smoothly for everyone.
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .error-card {
+        background: rgba(52, 58, 64, 0.95);
+        border: none;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .error-card .card-body {
+        padding: 3rem 2rem;
+    }
+
+    @media (max-width: 768px) {
+        .error-card .display-1 {
+            font-size: 4rem;
+        }
+
+        .error-card i[style*="5rem"] {
+            font-size: 3rem !important;
+        }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+
+{% block title %}Job Status - {{ job_id }}{% endblock %}
+
+{% block content %}
+<!-- Status Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="bi bi-activity me-2 text-primary"></i>Job Status
+        </h2>
+        <p class="text-muted mb-0">Real-time processing status across FMC systems</p>
+    </div>
+    <a href="{{ url_for('index') }}" class="btn btn-outline-primary btn-lg shadow-sm">
+        <i class="bi bi-plus-lg me-2"></i>New Object
+    </a>
+</div>
+
+<!-- Main Status Card -->
+<div class="card border-0 shadow-lg mb-4">
+    <div class="card-header py-3" style="background: var(--gradient-primary);">
+        <div class="d-flex justify-content-between align-items-center text-white">
+            <div>
+                <h5 class="mb-1 fw-semibold">
+                    <i class="bi bi-briefcase me-2"></i>{{ job_id }}
+                </h5>
+                <small class="opacity-75">Job Identifier</small>
+            </div>
+            <div class="text-end">
+                {% set status_config = {
+                    'completed': {'class': 'success', 'icon': 'check-circle-fill'},
+                    'running': {'class': 'warning', 'icon': 'hourglass-split'},
+                    'error': {'class': 'danger', 'icon': 'exclamation-triangle-fill'}
+                } %}
+                {% set config = status_config.get(job_data.status, {'class': 'secondary', 'icon': 'question-circle'}) %}
+                <span class="badge bg-{{ config.class }} fs-6 px-3 py-2">
+                    <i class="bi bi-{{ config.icon }} me-1"></i>
+                    {{ job_data.status.title() }}
+                </span>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-4">
+        <!-- Object Information -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-6">
+                <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                    {% if job_data.object_type == 'host' %}
+                    <div class="d-inline-flex align-items-center justify-content-center bg-info bg-gradient rounded-circle me-3" 
+                         style="width: 48px; height: 48px;">
+                        <i class="bi bi-hdd-network text-white"></i>
+                    </div>
+                    {% else %}
+                    <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-gradient rounded-circle me-3" 
+                         style="width: 48px; height: 48px;">
+                        <i class="bi bi-globe2 text-white"></i>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <h6 class="mb-1">Target {{ 'IP Address' if job_data.object_type == 'host' else 'FQDN' }}</h6>
+                        <code class="fs-6">{{ job_data.object_value or job_data.fqdn_value }}</code>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-secondary bg-gradient rounded-circle me-3" 
+                         style="width: 48px; height: 48px;">
+                        <i class="bi bi-tag text-white"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">Object Name</h6>
+                        <code class="fs-6">{{ job_data.object_name or job_data.fqdn_name }}</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timing Information -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-6">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-play-circle text-success me-2"></i>
+                    <div>
+                        <small class="text-muted d-block">Started</small>
+                        <span class="fw-semibold">{{ job_data.start_time }}</span>
+                    </div>
+                </div>
+            </div>
+            {% if job_data.end_time %}
+            <div class="col-md-6">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-stop-circle text-danger me-2"></i>
+                    <div>
+                        <small class="text-muted d-block">Completed</small>
+                        <span class="fw-semibold">{{ job_data.end_time }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Progress Bar for Running Jobs -->
+        {% if job_data.status == 'running' %}
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted">Overall Progress</span>
+                <span class="fw-semibold">{{ job_data.progress }}%</span>
+            </div>
+            <div class="progress" style="height: 12px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                     role="progressbar" 
+                     style="width: {{ job_data.progress }}%"
+                     aria-valuenow="{{ job_data.progress }}" 
+                     aria-valuemin="0" 
+                     aria-valuemax="100">
+                </div>
+            </div>
+            <div class="d-flex justify-content-center mt-3">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Processing...</span>
+                </div>
+                <span class="ms-2 text-muted">Processing FMC systems...</span>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Error Display -->
+        {% if job_data.error %}
+        <div class="alert alert-danger border-0 shadow-sm">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-exclamation-triangle-fill me-3"></i>
+                <div>
+                    <h6 class="alert-heading mb-1">Job Error</h6>
+                    <p class="mb-0">{{ job_data.error }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+<!-- FMC System Results -->
+{% if job_data.results %}
+<div class="mb-4">
+    <h4 class="mb-3">
+        <i class="bi bi-servers me-2"></i>FMC System Results
+    </h4>
+    <div class="row g-4">
+        {% for result in job_data.results %}
+        <div class="col-lg-6">
+            <div class="card {{ 'success-card' if result.success else 'error-card' }} h-100 border-0 shadow-sm">
+                <div class="card-header border-0 py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1 fw-semibold">
+                                <i class="bi bi-server me-2"></i>{{ result.fmc_name }}
+                            </h6>
+                            <small class="text-muted">{{ result.fmc_url }}</small>
+                        </div>
+                        <div>
+                            <span class="badge bg-{{ 'success' if result.success else 'danger' }} fs-6 px-3 py-2">
+                                <i class="bi bi-{{ 'check-circle' if result.success else 'x-circle' }} me-1"></i>
+                                {{ 'Success' if result.success else 'Failed' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-3">
+                    <!-- Status Message -->
+                    <div class="d-flex align-items-center mb-3 p-2 rounded-3 {{ 'bg-success-subtle' if result.success else 'bg-danger-subtle' }}">
+                        <i class="bi bi-{{ 'info-circle' if result.success else 'exclamation-circle' }} me-2 {{ 'text-success' if result.success else 'text-danger' }}"></i>
+                        <span class="fw-semibold">{{ result.message }}</span>
+                    </div>
+                    
+                    <!-- Process Steps -->
+                    {% if result.steps %}
+                    <div class="progress-steps">
+                        <h6 class="mb-2 fw-semibold">
+                            <i class="bi bi-list-task me-2"></i>Process Steps
+                        </h6>
+                        <div class="step-timeline">
+                            {% for step in result.steps %}
+                            {% set is_success = not 'fail' in step.lower() and not 'error' in step.lower() %}
+                            <div class="step-item d-flex align-items-center mb-2 p-2 rounded-2" 
+                                 style="background: {{ 'rgba(25, 135, 84, 0.1)' if is_success else 'rgba(220, 53, 69, 0.1)' }};">
+                                <div class="d-inline-flex align-items-center justify-content-center rounded-circle me-3 {{ 'bg-success' if is_success else 'bg-danger' }}" 
+                                     style="width: 24px; height: 24px; min-width: 24px;">
+                                    <i class="bi bi-{{ 'check' if is_success else 'x' }} text-white" style="font-size: 0.8rem;"></i>
+                                </div>
+                                <span class="small">{{ step }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+<!-- Job Summary -->
+{% if job_data.status == 'completed' and job_data.results %}
+{% set successful = job_data.results | selectattr('success') | list | length %}
+{% set total = job_data.results | length %}
+<div class="card border-0 shadow-lg mb-4">
+    <div class="card-header py-3" style="background: var(--gradient-secondary);">
+        <h5 class="mb-0 text-white fw-semibold">
+            <i class="bi bi-pie-chart me-2"></i>Job Summary
+        </h5>
+    </div>
+    <div class="card-body p-4">
+        <div class="row g-4 text-center">
+            <div class="col-md-4">
+                <div class="p-4 rounded-3 bg-success-subtle">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-success rounded-circle mb-3" 
+                         style="width: 64px; height: 64px;">
+                        <i class="bi bi-check-circle-fill text-white" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <h3 class="mb-1 text-success">{{ successful }}</h3>
+                    <p class="mb-0 fw-semibold">Successful</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-4 rounded-3 bg-danger-subtle">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-danger rounded-circle mb-3" 
+                         style="width: 64px; height: 64px;">
+                        <i class="bi bi-x-circle-fill text-white" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <h3 class="mb-1 text-danger">{{ total - successful }}</h3>
+                    <p class="mb-0 fw-semibold">Failed</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-4 rounded-3 bg-info-subtle">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-info rounded-circle mb-3" 
+                         style="width: 64px; height: 64px;">
+                        <i class="bi bi-servers text-white" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <h3 class="mb-1 text-info">{{ total }}</h3>
+                    <p class="mb-0 fw-semibold">Total FMCs</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Success Rate -->
+        <div class="mt-4 p-3 bg-light rounded-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="fw-semibold">Success Rate</span>
+                <span class="fw-bold">{{ "%.1f"|format((successful / total * 100) if total > 0 else 0) }}%</span>
+            </div>
+            <div class="progress" style="height: 8px;">
+                <div class="progress-bar bg-success" 
+                     role="progressbar" 
+                     style="width: {{ (successful / total * 100) if total > 0 else 0 }}%">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Deployment Status After Job Completion -->
+{% if job_data.deployment_status %}
+<div class="card border-0 shadow-lg">
+    <div class="card-header py-3" style="background: var(--gradient-primary);">
+        <h5 class="mb-0 text-white fw-semibold">
+            <i class="bi bi-rocket-takeoff me-2"></i>Deployment Status
+        </h5>
+    </div>
+    <div class="card-body p-4">
+        {% if job_data.deployment_status.has_pending %}
+        <div class="alert alert-warning border-0 mb-4">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-exclamation-triangle me-3"></i>
+                <div>
+                    <h6 class="alert-heading mb-1">Configuration Changes Pending</h6>
+                    <p class="mb-0">
+                        {{ job_data.deployment_status.total_pending }} device(s) across {{ job_data.deployment_status.total_fmcs }} FMC system(s) 
+                        have pending configuration changes that need to be deployed.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row g-3 mb-4">
+            {% for fmc in job_data.deployment_status.fmc_status %}
+            {% if fmc.pending_count > 0 %}
+            <div class="col-md-6">
+                <div class="d-flex align-items-center p-3 bg-warning-subtle rounded-3">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-warning rounded-circle me-3" 
+                         style="width: 40px; height: 40px;">
+                        <i class="bi bi-server text-white"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">{{ fmc.name }}</h6>
+                        <small class="text-muted">{{ fmc.pending_count }} device(s) pending</small>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        
+        <div class="d-flex justify-content-center">
+            <a href="{{ url_for('deployments_page') }}" class="btn btn-warning btn-lg shadow-sm">
+                <i class="bi bi-rocket-takeoff me-2"></i>Manage Deployments
+            </a>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <div class="d-inline-flex align-items-center justify-content-center bg-success rounded-circle mb-3" 
+                 style="width: 64px; height: 64px;">
+                <i class="bi bi-check-circle text-white" style="font-size: 1.5rem;"></i>
+            </div>
+            <h6 class="mb-2">All Systems Up to Date</h6>
+            <p class="text-muted mb-0">No pending deployments found across all FMC systems.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if job_data.status == 'running' %}
+<script>
+// Enhanced auto-refresh with visual feedback
+let refreshCount = 0;
+const maxRefresh = 120; // 10 minutes max
+
+function refreshPage() {
+    if (refreshCount >= maxRefresh) {
+        console.log('Max refresh limit reached');
+        return;
+    }
+    
+    refreshCount++;
+    
+    // Add visual indicator before refresh
+    const indicator = document.createElement('div');
+    indicator.className = 'position-fixed top-0 end-0 m-3 alert alert-info alert-dismissible fade show';
+    indicator.innerHTML = `
+        <i class="bi bi-arrow-clockwise me-2"></i>
+        Refreshing status...
+        <div class="spinner-border spinner-border-sm ms-2" role="status"></div>
+    `;
+    document.body.appendChild(indicator);
+    
+    setTimeout(() => {
+        location.reload();
+    }, 1000);
+}
+
+// Refresh every 5 seconds
+setTimeout(refreshPage, 5000);
+
+// Add page visibility API to pause refresh when tab is not active
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        console.log('Page hidden, refresh paused');
+    } else {
+        console.log('Page visible, refresh resumed');
+    }
+});
+</script>
+{% endif %}
+
+<!-- Add smooth animations -->
+<style>
+.step-timeline .step-item {
+    animation: slideInLeft 0.3s ease-out;
+}
+
+.step-timeline .step-item:nth-child(even) {
+    animation-delay: 0.1s;
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+</style>
+{% endblock %}

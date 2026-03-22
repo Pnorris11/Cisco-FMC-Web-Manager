@@ -1,0 +1,751 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="text-center mb-5">
+    <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-gradient rounded-circle mb-3" 
+         style="width: 80px; height: 80px;">
+        <i class="bi bi-diagram-3-fill text-white" style="font-size: 2rem;"></i>
+    </div>
+    <h1 class="display-5 fw-bold mb-3">FMC Manager</h1>
+    <p class="lead text-muted mb-0">Streamline management across multiple Cisco FMC systems</p>
+</div>
+
+<!-- Deployment Status Alert - Loaded via AJAX for fast page rendering -->
+<div class="row justify-content-center mb-4">
+    <div class="col-lg-10">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0 text-muted">
+                <i class="bi bi-activity me-2"></i>Deployment Status
+            </h6>
+            <button id="refresh-deployment-btn" class="btn btn-sm btn-outline-primary" onclick="refreshDeploymentStatus()">
+                <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+            </button>
+        </div>
+        <div id="deployment-status-container">
+            <!-- Loading placeholder -->
+            <div class="alert alert-info border-0 shadow-sm">
+                <div class="d-flex align-items-center">
+                    <div class="spinner-border spinner-border-sm text-info me-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <div>
+                        <h6 class="alert-heading mb-1">Loading Deployment Status...</h6>
+                        <p class="mb-0">Checking FMC systems...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Main Form Card -->
+        <div class="card border-0 shadow-lg mb-4">
+            <div class="card-header bg-gradient text-white text-center py-4" style="background: var(--gradient-primary);">
+                <h4 class="mb-0 fw-semibold">
+                    <i class="bi bi-plus-circle me-2"></i>Add Object to FMC Systems
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                <div class="row align-items-center mb-4">
+                    <div class="col-md-2 text-center">
+                        <i class="bi bi-globe2 text-primary" id="headerIcon" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <div class="col-md-10">
+                        <h6 class="mb-1">Quick & Secure Deployment</h6>
+                        <p class="text-muted mb-0 small" id="headerDescription">
+                            Create FQDN or Host objects across all configured FMC systems and update network groups.
+                        </p>
+                    </div>
+                </div>
+                
+                <form method="POST" action="{{ url_for('submit_fqdn') }}" class="needs-validation" novalidate>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <!-- Object Type Selection -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-box me-2"></i>Object Type
+                        </label>
+                        <div class="btn-group w-100" role="group" aria-label="Object type selection">
+                            <input type="radio" class="btn-check" name="object_type" id="type_fqdn" value="fqdn" checked autocomplete="off">
+                            <label class="btn btn-outline-primary" for="type_fqdn">
+                                <i class="bi bi-globe me-2"></i>FQDN
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="object_type" id="type_host" value="host" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="type_host">
+                                <i class="bi bi-hdd-network me-2"></i>Host (IP Address)
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="object_type" id="type_network" value="network" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="type_network">
+                                <i class="bi bi-diagram-3 me-2"></i>Network (Subnet)
+                            </label>
+                        </div>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Select whether to create an FQDN, Host (IP address), or Network (subnet) object
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Input Field -->
+                    <div class="mb-4">
+                        <label for="object_value" class="form-label fw-semibold">
+                            <i class="bi bi-globe me-2" id="inputIcon"></i><span id="inputLabel">Fully Qualified Domain Name</span>
+                        </label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text bg-white border-end-0">
+                                <i class="bi bi-link-45deg text-primary" id="inputGroupIcon"></i>
+                            </span>
+                            <input type="text" 
+                                   class="form-control border-start-0" 
+                                   id="object_value" 
+                                   name="object_value" 
+                                   placeholder="example.com" 
+                                   required
+                                   pattern="^[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?$">
+                            <div class="invalid-feedback" id="inputFeedback">
+                                Please enter a valid FQDN (e.g., example.com)
+                            </div>
+                        </div>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            <span id="inputHelp">Enter the domain name to be added to all configured FMC systems</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="object_name" class="form-label fw-semibold">
+                            <i class="bi bi-tag me-2"></i>Object Name (Optional)
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="object_name" 
+                               name="object_name" 
+                               maxlength="100"
+                               placeholder="Custom name for this object (optional)">
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Leave blank to auto-generate name based on FQDN or IP address
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="object_description" class="form-label fw-semibold">
+                            <i class="bi bi-file-text me-2"></i>Description (Optional)
+                        </label>
+                        <textarea class="form-control" 
+                                  id="object_description" 
+                                  name="object_description" 
+                                  rows="2"
+                                  maxlength="200"
+                                  placeholder="Add a description for this object (optional)"></textarea>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Add a description to help identify this object (max 200 characters)
+                        </div>
+                    </div>                    <div class="mb-4">
+                        <label for="group_name" class="form-label fw-semibold">
+                            <i class="bi bi-collection me-2"></i>Network Group (Optional)
+                        </label>
+                        <select class="form-select form-select-lg" id="group_name" name="group_name">
+                            <option value="">-- Create object only --</option>
+                        </select>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Select a network group to add the object to, or leave blank to create the object only
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg shadow-sm">
+                            <i class="bi bi-send me-2"></i>Process
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Process Overview Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-6">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center p-4">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-success bg-gradient rounded-circle mb-3" 
+                             style="width: 60px; height: 60px;">
+                            <i class="bi bi-list-check text-white" style="font-size: 1.5rem;"></i>
+                        </div>
+                        <h5 class="card-title">Process Steps</h5>
+                        <ul class="list-unstyled text-start">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                <small>Authenticate with FMC systems</small>
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                <small>Create FQDN objects</small>
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                <small>Update network groups</small>
+                            </li>
+                            <li>
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                <small>Deploy configuration changes</small>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center p-4">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-info bg-gradient rounded-circle mb-3" 
+                             style="width: 60px; height: 60px;">
+                            <i class="bi bi-clock text-white" style="font-size: 1.5rem;"></i>
+                        </div>
+                        <h5 class="card-title">Timing & Performance</h5>
+                        <div class="text-start">
+                            <div class="d-flex justify-content-between mb-2">
+                                <small class="text-muted">Per FMC System:</small>
+                                <small class="fw-semibold">1-3 minutes</small>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <small class="text-muted">Parallel Processing:</small>
+                                <small class="fw-semibold text-success">Yes</small>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <small class="text-muted">Real-time Updates:</small>
+                                <small class="fw-semibold text-success">Yes</small>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">Background Processing:</small>
+                                <small class="fw-semibold text-success">Enabled</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Tips -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="bi bi-lightbulb text-warning me-2"></i>Quick Tips
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-shield-check text-success me-2 mt-1"></i>
+                            <div>
+                                <small class="fw-semibold d-block">Secure Processing</small>
+                                <small class="text-muted">All connections use HTTPS with certificate validation</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-arrow-clockwise text-primary me-2 mt-1"></i>
+                            <div>
+                                <small class="fw-semibold d-block">Automatic Retry</small>
+                                <small class="text-muted">Failed operations are automatically retried with alternative methods</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-eye text-info me-2 mt-1"></i>
+                            <div>
+                                <small class="fw-semibold d-block">Live Monitoring</small>
+                                <small class="text-muted">Watch progress in real-time on the status page</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load deployment status via AJAX for fast page rendering
+function loadDeploymentStatus(forceRefresh = false) {
+    const url = forceRefresh ? '/api/deployment-status?force=true' : '/api/deployment-status';
+
+    fetch(url)
+        .then(response => response.json())
+        .then(deploymentStatus => {
+            const container = document.getElementById('deployment-status-container');
+            const now = new Date().toLocaleTimeString();
+
+            if (deploymentStatus.has_pending) {
+                // Build pending devices badges
+                let badgesHtml = '';
+                deploymentStatus.fmc_status.forEach(fmc => {
+                    if (fmc.pending_count > 0) {
+                        badgesHtml += `<span class="badge bg-warning text-dark me-2">${fmc.name}: ${fmc.pending_count} pending</span>`;
+                    }
+                });
+
+                container.innerHTML = `
+                    <div class="alert alert-warning border-0 shadow-sm">
+                        <div class="d-flex align-items-center">
+                            <div class="d-inline-flex align-items-center justify-content-center bg-warning rounded-circle me-3"
+                                 style="width: 48px; height: 48px;">
+                                <i class="bi bi-exclamation-triangle text-white"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="alert-heading mb-1">⚠️ Pending Deployments Detected</h6>
+                                <p class="mb-2">
+                                    ${deploymentStatus.total_pending} device(s) across ${deploymentStatus.total_fmcs} FMC system(s) have pending configuration changes.
+                                </p>
+                                <div class="small mb-2">
+                                    ${badgesHtml}
+                                </div>
+                                <div class="small text-muted">
+                                    <i class="bi bi-clock me-1"></i>Last updated: ${now}
+                                </div>
+                            </div>
+                            <div>
+                                <a href="/deployments" class="btn btn-warning">
+                                    <i class="bi bi-gear me-1"></i>Manage Deployments
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="alert alert-success border-0 shadow-sm">
+                        <div class="d-flex align-items-center">
+                            <div class="d-inline-flex align-items-center justify-content-center bg-success rounded-circle me-3"
+                                 style="width: 48px; height: 48px;">
+                                <i class="bi bi-check-circle text-white"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="alert-heading mb-1">✅ All Systems Current</h6>
+                                <p class="mb-1">No pending deployments found across ${deploymentStatus.total_fmcs} FMC system(s).</p>
+                                <div class="small text-muted">
+                                    <i class="bi bi-clock me-1"></i>Last updated: ${now}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading deployment status:', error);
+            const container = document.getElementById('deployment-status-container');
+            container.innerHTML = `
+                <div class="alert alert-danger border-0 shadow-sm">
+                    <div class="d-flex align-items-center">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-danger rounded-circle me-3"
+                             style="width: 48px; height: 48px;">
+                            <i class="bi bi-exclamation-circle text-white"></i>
+                        </div>
+                        <div>
+                            <h6 class="alert-heading mb-1">Error Loading Status</h6>
+                            <p class="mb-0">Unable to load deployment status. Please refresh the page.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        })
+        .finally(() => {
+            // Re-enable refresh button
+            const refreshBtn = document.getElementById('refresh-deployment-btn');
+            if (refreshBtn) {
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Refresh';
+            }
+        });
+}
+
+// Refresh deployment status function with visual feedback
+function refreshDeploymentStatus() {
+    const refreshBtn = document.getElementById('refresh-deployment-btn');
+    const container = document.getElementById('deployment-status-container');
+
+    // Disable button and show loading state
+    refreshBtn.disabled = true;
+    refreshBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Refreshing...';
+
+    // Show loading in container
+    container.innerHTML = `
+        <div class="alert alert-info border-0 shadow-sm">
+            <div class="d-flex align-items-center">
+                <div class="spinner-border spinner-border-sm text-info me-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div>
+                    <h6 class="alert-heading mb-1">Refreshing Deployment Status...</h6>
+                    <p class="mb-0">Fetching fresh data from FMC systems...</p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Force refresh (bypass cache)
+    loadDeploymentStatus(true);
+}
+
+// Object type selection handler
+document.addEventListener('DOMContentLoaded', function() {
+    // Load deployment status asynchronously
+    loadDeploymentStatus();
+
+    const fqdnRadio = document.getElementById('type_fqdn');
+    const hostRadio = document.getElementById('type_host');
+    const networkRadio = document.getElementById('type_network');
+    const objectValueInput = document.getElementById('object_value');
+    const inputLabel = document.getElementById('inputLabel');
+    const inputIcon = document.getElementById('inputIcon');
+    const inputGroupIcon = document.getElementById('inputGroupIcon');
+    const inputFeedback = document.getElementById('inputFeedback');
+    const inputHelp = document.getElementById('inputHelp');
+    const headerIcon = document.getElementById('headerIcon');
+    const headerDescription = document.getElementById('headerDescription');
+
+    function updateFormForObjectType(type) {
+        if (type === 'fqdn') {
+            // FQDN configuration
+            inputLabel.textContent = 'Fully Qualified Domain Name';
+            inputIcon.className = 'bi bi-globe me-2';
+            inputGroupIcon.className = 'bi bi-link-45deg text-primary';
+            headerIcon.className = 'bi bi-globe2 text-primary';
+            objectValueInput.placeholder = 'example.com';
+            objectValueInput.pattern = '^[a-zA-Z0-9]([a-zA-Z0-9\\-\\.]*[a-zA-Z0-9])?$';
+            inputFeedback.textContent = 'Please enter a valid FQDN (e.g., example.com)';
+            inputHelp.textContent = 'Enter the domain name to be added to all configured FMC systems';
+            headerDescription.textContent = 'Create FQDN objects across all configured FMC systems and update network groups.';
+        } else if (type === 'host') {
+            // Host (IP) configuration
+            inputLabel.textContent = 'IP Address';
+            inputIcon.className = 'bi bi-hdd-network me-2';
+            inputGroupIcon.className = 'bi bi-router text-primary';
+            headerIcon.className = 'bi bi-hdd-network text-primary';
+            objectValueInput.placeholder = '192.168.1.100';
+            // IP address pattern (supports both IPv4 and basic validation)
+            objectValueInput.pattern = '^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$';
+            inputFeedback.textContent = 'Please enter a valid IPv4 address (e.g., 192.168.1.100)';
+            inputHelp.textContent = 'Enter the IP address to be added to all configured FMC systems';
+            headerDescription.textContent = 'Create Host (IP address) objects across all configured FMC systems and update network groups.';
+        } else {
+            // Network (subnet) configuration
+            inputLabel.textContent = 'Network Subnet (CIDR)';
+            inputIcon.className = 'bi bi-diagram-3 me-2';
+            inputGroupIcon.className = 'bi bi-subnet text-primary';
+            headerIcon.className = 'bi bi-diagram-3-fill text-primary';
+            objectValueInput.placeholder = '10.10.10.0/24';
+            // CIDR pattern - IP address followed by /prefix
+            objectValueInput.pattern = '^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\/([1-9]|[12][0-9]|3[0-2])$';
+            inputFeedback.textContent = 'Please enter a valid IPv4 network in CIDR notation (e.g., 10.10.10.0/24)';
+            inputHelp.textContent = 'Enter the network subnet in CIDR notation (e.g., 10.10.10.0/24)';
+            headerDescription.textContent = 'Create Network (subnet) objects across all configured FMC systems and update network groups.';
+        }
+        
+        // Clear any validation state when switching
+        objectValueInput.value = '';
+        objectValueInput.classList.remove('is-valid', 'is-invalid');
+        const forms = document.getElementsByClassName('needs-validation');
+        if (forms.length > 0) {
+            forms[0].classList.remove('was-validated');
+        }
+    }
+    
+    fqdnRadio.addEventListener('change', function() {
+        if (this.checked) {
+            updateFormForObjectType('fqdn');
+        }
+    });
+    
+    hostRadio.addEventListener('change', function() {
+        if (this.checked) {
+            updateFormForObjectType('host');
+        }
+    });
+    
+    networkRadio.addEventListener('change', function() {
+        if (this.checked) {
+            updateFormForObjectType('network');
+        }
+    });
+    
+    // Initialize with FQDN selected
+    updateFormForObjectType('fqdn');
+    
+    // Load network groups
+    loadNetworkGroups();
+});
+
+// Load network groups on page load
+
+function loadNetworkGroups() {
+    fetch('/api/objects/groups')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('group_name');
+            select.innerHTML = '<option value="">-- Create object only --</option>';
+            
+            let totalGroups = 0;
+            let fmcCount = 0;
+            
+            // Add groups from all FMCs
+            Object.keys(data).forEach(fmcName => {
+                fmcCount++;
+                if (data[fmcName].length > 0) {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = `${fmcName} (${data[fmcName].length} groups)`;
+                    
+                    data[fmcName].forEach(group => {
+                        const option = document.createElement('option');
+                        option.value = group.name;
+                        option.textContent = group.name;
+                        option.dataset.fmc = fmcName;
+                        option.dataset.groupId = group.id;
+                        optgroup.appendChild(option);
+                        totalGroups++;
+                    });
+                    
+                    select.appendChild(optgroup);
+                } else {
+                    console.warn(`No groups found for ${fmcName}`);
+                }
+            });
+            
+            console.log(`Loaded ${totalGroups} total groups from ${fmcCount} FMC systems`);
+            
+            // Show a message if no groups were loaded
+            if (totalGroups === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = '-- No network groups found --';
+                option.disabled = true;
+                select.appendChild(option);
+                console.warn('No network groups were loaded from any FMC system');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading network groups:', error);
+            const select = document.getElementById('group_name');
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = '-- Error loading groups --';
+            option.disabled = true;
+            select.appendChild(option);
+        });
+}
+
+// Form validation
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+
+// Handle form submission with AJAX
+document.querySelector('form').addEventListener('submit', function(e) {
+    e.preventDefault(); // Prevent default form submission
+    
+    const form = this;
+    const btn = form.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    
+    // Validate form first
+    if (!form.checkValidity()) {
+        form.classList.add('was-validated');
+        return;
+    }
+    
+    // Get form data
+    const objectType = form.querySelector('input[name="object_type"]:checked').value;
+    const objectValue = form.querySelector('#object_value').value.trim();
+    const objectName = form.querySelector('#object_name').value.trim();
+    const objectDescription = form.querySelector('#object_description').value.trim();
+    const groupName = form.querySelector('#group_name').value.trim();
+    
+    if (!objectValue) {
+        const typeLabel = objectType === 'fqdn' ? 'FQDN' : (objectType === 'host' ? 'IP address' : 'network subnet');
+        showToast('Please enter a valid ' + typeLabel, 'error');
+        return;
+    }
+    
+    // Show loading state
+    btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Processing...';
+    btn.disabled = true;
+    
+    // Submit via AJAX
+    fetch('/submit', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            object_type: objectType,
+            object_value: objectValue,
+            object_name: objectName,
+            object_description: objectDescription,
+            group_name: groupName
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success popup
+            showSuccessModal(data);
+            // Reset form
+            form.reset();
+            form.classList.remove('was-validated');
+            // Reset to FQDN type
+            document.getElementById('type_fqdn').checked = true;
+            document.getElementById('type_fqdn').dispatchEvent(new Event('change'));
+            // Reload network groups in case new ones were created
+            loadNetworkGroups();
+        } else {
+            showToast(data.message || 'An error occurred while processing the request', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Network error occurred. Please try again.', 'error');
+    })
+    .finally(() => {
+        // Reset button
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+});
+
+// Success modal function
+function showSuccessModal(data) {
+    const objectType = data.object_type || 'fqdn';
+    const displayType = objectType === 'fqdn' ? 'FQDN' : (objectType === 'host' ? 'Host (IP)' : 'Network (Subnet)');
+    const displayValue = data.object_name || data.fqdn_name || data.object_value;
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.innerHTML = `
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-check-circle me-2"></i>Processing Started Successfully!
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-success bg-gradient rounded-circle mb-3" 
+                             style="width: 64px; height: 64px;">
+                            <i class="bi bi-check-lg text-white" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                    <h6 class="text-center mb-3">Request Processed Successfully!</h6>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="card bg-light">
+                                <div class="card-body p-3">
+                                    <div class="row">
+                                        <div class="col-4"><strong>Object Type:</strong></div>
+                                        <div class="col-8">${displayType}</div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-4"><strong>Value:</strong></div>
+                                        <div class="col-8"><code>${displayValue}</code></div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-4"><strong>Network Group:</strong></div>
+                                        <div class="col-8">${data.group_name || '<em>None selected</em>'}</div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-4"><strong>Job ID:</strong></div>
+                                        <div class="col-8"><small class="text-muted">${data.job_id}</small></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <small>The object is being processed in the background across all FMC systems. You can view the progress on the status page.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <a href="${data.status_url}" class="btn btn-primary">
+                        <i class="bi bi-eye me-2"></i>View Status
+                    </a>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+    
+    // Remove modal from DOM when hidden
+    modal.addEventListener('hidden.bs.modal', () => {
+        document.body.removeChild(modal);
+    });
+}
+
+// Toast notification function
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toast-container') || createToastContainer();
+    const toast = document.createElement('div');
+    const iconMap = {
+        'success': 'check-circle-fill',
+        'error': 'exclamation-triangle-fill',
+        'info': 'info-circle-fill',
+        'warning': 'exclamation-triangle-fill'
+    };
+    
+    toast.className = `toast align-items-center text-white bg-${type === 'error' ? 'danger' : type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="bi bi-${iconMap[type]} me-2"></i>
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
+}
+
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '1056';
+    document.body.appendChild(container);
+    return container;
+}
+</script>
+{% endblock %}
